@@ -1,0 +1,9 @@
+POST http://localhost:6060/do-stuff-without-outbox
+
+###
+
+POST http://localhost:6060/do-stuff-with-tracing-disconnected-outbox
+
+###
+
+POST http://localhost:6060/do-stuff-with-tracing-connected-outbox
