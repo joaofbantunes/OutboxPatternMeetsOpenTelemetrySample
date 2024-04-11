@@ -19,11 +19,18 @@ services:
       POSTGRES_USER: "user"
       POSTGRES_PASSWORD: "pass"
       POSTGRES_DB: "SampleDb"
-  
-  jaeger:
-    image: jaegertracing/all-in-one:1
-    hostname: jaeger
-    container_name: jaeger
+  lgtm:
+    image: grafana/otel-lgtm
+    hostname: lgtm
+    container_name: lgtm
     ports:
-      - "16686:16686" # ui
-      - "4317:4317" # otel grpc
+      - "3000:3000" # ui
+      - "4317:4317" # otlp gRPC
+      - "4318:4318" # otlp HTTP
+#  jaeger:
+#    image: jaegertracing/all-in-one:1
+#    hostname: jaeger
+#    container_name: jaeger
+#    ports:
+#      - "16686:16686" # ui
+#      - "4317:4317" # otel grpc
