@@ -8,7 +8,7 @@ namespace Producer;
 internal static class OutboxPublisherActivitySource
 {
     public const string ActivitySourceName = "outbox";
-    
+
     private static readonly TextMapPropagator Propagator
         = Propagators.DefaultTextMapPropagator;
 

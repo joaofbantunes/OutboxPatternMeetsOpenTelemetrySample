@@ -8,7 +8,7 @@ internal class EventPublisher
 {
     private readonly ILogger<EventPublisher> _logger;
     private readonly IModel _model;
-    
+
     public EventPublisher(IConnection connection, ILogger<EventPublisher> logger)
     {
         _logger = logger;
@@ -25,9 +25,14 @@ internal class EventPublisher
         var properties = _model.CreateBasicProperties();
         properties.ContentType = MediaTypeNames.Application.Json;
         properties.DeliveryMode = 2;
-        properties.Headers =
-            EventPublisherActivitySource.EnrichHeadersWithTracingContext(activity, new Dictionary<string, object>());
-        _model.BasicPublish("sample.exchange", "sample.key", properties, JsonSerializer.SerializeToUtf8Bytes(@event));
+        properties.Headers = EventPublisherActivitySource.EnrichHeadersWithTracingContext(
+            activity,
+            new Dictionary<string, object>());
+        _model.BasicPublish(
+            "sample.exchange",
+            "sample.key",
+            properties,
+            JsonSerializer.SerializeToUtf8Bytes(@event));
         _logger.LogInformation("Published event: {Event}", @event);
     }
 }

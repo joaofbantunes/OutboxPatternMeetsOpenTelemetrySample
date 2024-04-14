@@ -7,7 +7,7 @@ namespace Producer;
 
 internal class OutboxPublisher(
     NpgsqlDataSource dataSource,
-    EventPublisher eventPublisher, 
+    EventPublisher eventPublisher,
     OutboxListener outboxListener) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -19,10 +19,9 @@ internal class OutboxPublisher(
             var messagesRead = 0;
             using (var _ = OutboxPublisherActivitySource.StartIterationActivity())
             {
-                await using var connection = dataSource.CreateConnection();
-                await connection.OpenAsync(stoppingToken);
+                await using var connection = await dataSource.OpenConnectionAsync(stoppingToken);
                 var tx = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, stoppingToken);
-                var messages = await connection.QueryAsync<OutboxMessage>(
+                var messages = (await connection.QueryAsync<OutboxMessage>(
                     // lang=postgresql
                     """
                     SELECT id as Id, payload as Payload, telemetry_context as TelemetryContext, created_at as CreatedAt
@@ -30,12 +29,15 @@ internal class OutboxPublisher(
                     ORDER BY id
                     LIMIT @BatchSize;
                     """,
-                    new { BatchSize = batchSize });
+                    new { BatchSize = batchSize })).ToArray();
 
-                await connection.ExecuteAsync(
-                    // lang=postgresql
-                    "DELETE FROM public.outbox WHERE id = any(@Ids);",
-                    new { Ids = messages.Select(m => m.Id).ToArray() });
+                if (messages.Length > 0)
+                {
+                    await connection.ExecuteAsync(
+                        // lang=postgresql
+                        "DELETE FROM public.outbox WHERE id = any(@Ids);",
+                        new { Ids = messages.Select(m => m.Id).ToArray() });
+                }
 
                 foreach (var message in messages)
                 {

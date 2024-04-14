@@ -43,36 +43,41 @@ app.MapPost("/do-stuff-without-outbox", (EventPublisher publisher, Faker faker) 
 });
 
 app.MapPost("/do-stuff-with-tracing-disconnected-outbox",
-    async (NpgsqlDataSource dataSource, Faker faker, OutboxListener outboxListener) =>
-{
-    var @event = new Event(Guid.NewGuid(), faker.Hacker.Verb());
-    await using var command = dataSource.CreateCommand();
-    // lang=postgresql
-    command.CommandText = "INSERT INTO outbox (payload) VALUES (@Payload);";
-    command.Parameters.AddWithValue("Payload", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(@event));
-    _ = await command.ExecuteNonQueryAsync();
-    outboxListener.OnNewMessages();
-    return Results.Accepted();
-});
-
-app.MapPost("/do-stuff-with-tracing-connected-outbox", 
-    async (NpgsqlDataSource dataSource, Faker faker, OutboxListener outboxListener) =>
-{
-    var @event = new Event(Guid.NewGuid(), faker.Hacker.Verb());
-    var telemetryContext = OutboxPublisherActivitySource.ExtractTelemetryContextForPersistence();
-    await using var command = dataSource.CreateCommand();
-    command.CommandText =
+    async (NpgsqlDataSource dataSource,
+        Faker faker,
+        OutboxListener outboxListener) =>
+    {
+        var @event = new Event(Guid.NewGuid(), faker.Hacker.Verb());
+        await using var command = dataSource.CreateCommand();
         // lang=postgresql
-        """
-        INSERT INTO outbox (payload, telemetry_context)
-        VALUES (@Payload, @TelemetryContext);
-        """;
-    command.Parameters.AddWithValue("Payload", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(@event));
-    command.Parameters.AddWithValue("TelemetryContext", NpgsqlDbType.Jsonb, telemetryContext);
-    _ = await command.ExecuteNonQueryAsync();
-    outboxListener.OnNewMessages();
-    return Results.Accepted();
-});
+        command.CommandText = "INSERT INTO outbox (payload) VALUES (@Payload);";
+        command.Parameters.AddWithValue(
+            "Payload",
+            NpgsqlDbType.Jsonb,
+            JsonSerializer.Serialize(@event));
+        _ = await command.ExecuteNonQueryAsync();
+        outboxListener.OnNewMessages();
+        return Results.Accepted();
+    });
+
+app.MapPost("/do-stuff-with-tracing-connected-outbox",
+    async (NpgsqlDataSource dataSource, Faker faker, OutboxListener outboxListener) =>
+    {
+        var @event = new Event(Guid.NewGuid(), faker.Hacker.Verb());
+        var telemetryContext = OutboxPublisherActivitySource.ExtractTelemetryContextForPersistence();
+        await using var command = dataSource.CreateCommand();
+        command.CommandText =
+            // lang=postgresql
+            """
+            INSERT INTO outbox (payload, telemetry_context)
+            VALUES (@Payload, @TelemetryContext);
+            """;
+        command.Parameters.AddWithValue("Payload", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(@event));
+        command.Parameters.AddWithValue("TelemetryContext", NpgsqlDbType.Jsonb, telemetryContext);
+        _ = await command.ExecuteNonQueryAsync();
+        outboxListener.OnNewMessages();
+        return Results.Accepted();
+    });
 
 app.Run();
 
